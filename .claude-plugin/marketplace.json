@@ -1,0 +1,18 @@
+{
+  "name": "ai-tools",
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Claude Code plugins for AI-assisted development workflows"
+  },
+  "owner": {
+    "name": "Maanas Datla",
+    "email": "maanas.datla@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "librarian",
+      "source": "./plugins/librarian",
+      "description": "Hierarchical memory library system that automatically loads project-specific context when editing files and captures learnings during sessions"
+    }
+  ]
+}

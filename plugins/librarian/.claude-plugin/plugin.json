@@ -1,0 +1,12 @@
+{
+  "name": "librarian",
+  "version": "1.0.0",
+  "description": "Hierarchical memory library system that automatically loads project-specific context when editing files and captures learnings during sessions",
+  "author": {
+    "name": "Maanas Datla",
+    "email": "maanas.datla@buildertrend.com"
+  },
+  "license": "MIT",
+  "keywords": ["memory", "context", "knowledge-base", "library", "hooks"],
+  "skills": "./skills/"
+}

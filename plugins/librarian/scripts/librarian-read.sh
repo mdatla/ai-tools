@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# Librarian Pre-Tool Hook (macOS/Linux)
+# Walks up _memory_library/ from the target file, injects context into Claude.
+
+# --- Logging (set to false to disable) ---
+LIBRARIAN_LOG_ENABLED=true
+LIBRARIAN_LOG_FILE="$HOME/.claude/librarian.log"
+
+log() {
+  if [ "$LIBRARIAN_LOG_ENABLED" = true ]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [read] $1" >> "$LIBRARIAN_LOG_FILE"
+  fi
+}
+
+set -uo pipefail
+
+INPUT=$(cat)
+log "Hook fired"
+
+# Extract file_path — grep the JSON string value
+FILE_PATH=$(echo "$INPUT" | grep -o '"file_path":"[^"]*"' | head -1 | cut -d'"' -f4)
+if [ -z "$FILE_PATH" ]; then
+  log "No file_path found, skipping"
+  exit 0
+fi
+log "File: $FILE_PATH"
+
+# Walk up from the file's directory to find nearest _memory_library/
+FILE_DIR=$(dirname "$FILE_PATH")
+PROJECT_DIR=""
+SEARCH_DIR="$FILE_DIR"
+while true; do
+  if [ -d "$SEARCH_DIR/_memory_library" ]; then
+    PROJECT_DIR="$SEARCH_DIR"
+    break
+  fi
+  PARENT=$(dirname "$SEARCH_DIR")
+  if [ "$PARENT" = "$SEARCH_DIR" ]; then
+    break
+  fi
+  SEARCH_DIR="$PARENT"
+done
+
+if [ -z "$PROJECT_DIR" ]; then
+  log "No _memory_library/ found"
+  exit 0
+fi
+
+MEMORY_LIB="$PROJECT_DIR/_memory_library"
+
+# Compute relative path
+REL_PATH="${FILE_PATH#"$PROJECT_DIR"/}"
+if [ "$REL_PATH" = "$FILE_PATH" ]; then
+  exit 0
+fi
+
+REL_DIR=$(dirname "$REL_PATH")
+
+# Collect .md files walking up the tree
+CONTEXT=""
+CURRENT_DIR="$REL_DIR"
+VISITED_ROOT=false
+
+while true; do
+  if [ "$CURRENT_DIR" = "." ]; then
+    MIRROR_DIR="$MEMORY_LIB"
+    DISPLAY_PREFIX="global"
+    VISITED_ROOT=true
+  else
+    MIRROR_DIR="$MEMORY_LIB/$CURRENT_DIR"
+    DISPLAY_PREFIX="$CURRENT_DIR"
+  fi
+
+  if [ -d "$MIRROR_DIR" ]; then
+    for md_file in "$MIRROR_DIR"/*.md; do
+      if [ -f "$md_file" ]; then
+        BASENAME=$(basename "$md_file")
+        if [ "$BASENAME" = ".scratch.md" ]; then
+          continue
+        fi
+        CONTEXT="$CONTEXT
+--- [$DISPLAY_PREFIX/$BASENAME] ---
+$(cat "$md_file")
+"
+      fi
+    done
+  fi
+
+  if [ "$CURRENT_DIR" = "." ]; then
+    break
+  fi
+  PARENT_DIR=$(dirname "$CURRENT_DIR")
+  if [ "$PARENT_DIR" = "$CURRENT_DIR" ]; then
+    break
+  fi
+  CURRENT_DIR="$PARENT_DIR"
+done
+
+# Read root if walk-up didn't reach it
+if [ "$VISITED_ROOT" = false ]; then
+  for md_file in "$MEMORY_LIB"/*.md; do
+    if [ -f "$md_file" ]; then
+      BASENAME=$(basename "$md_file")
+      if [ "$BASENAME" = ".scratch.md" ]; then
+        continue
+      fi
+      CONTEXT="$CONTEXT
+--- [global/$BASENAME] ---
+$(cat "$md_file")
+"
+    fi
+  done
+fi
+
+# Output JSON with additionalContext
+if [ -n "$CONTEXT" ]; then
+  MD_COUNT=$(echo "$CONTEXT" | grep -c '^\-\-\-' || true)
+  log "Injecting $MD_COUNT files for $REL_PATH"
+
+  FULL_CONTEXT="[Librarian] Memory library context for $REL_PATH:
+$CONTEXT"
+  # Escape for JSON: backslashes, quotes, newlines, tabs
+  ESCAPED=$(printf '%s' "$FULL_CONTEXT" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | awk '{printf "%s\\n", $0}' | sed 's/\\n$//')
+  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","additionalContext":"%s"}}\n' "$ESCAPED"
+fi
+
+exit 0
