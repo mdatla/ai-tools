@@ -1,6 +1,6 @@
 # AI Tools
 
-A Claude Code plugin marketplace for AI-assisted development workflows.
+A Claude Code plugin marketplace for AI-assisted development workflows. 
 
 ## Installation
 
