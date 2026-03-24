@@ -1,0 +1,16 @@
+# Repository Code Owners
+# These users are automatically requested for review when a PR is opened
+
+# Global owner - all files require approval from repo owner
+* @mdatla
+
+# Documentation changes
+/_docs/ @mdatla
+
+# Source code changes
+/src/ @mdatla
+
+# Docker and build files
+/Dockerfile @mdatla
+/docker-compose.yml @mdatla
+/.github/workflows/ @mdatla
