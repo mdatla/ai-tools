@@ -135,4 +135,4 @@ Two hooks drive the Librarian automatically (auto-activate on plugin install):
 
 The stop hook handles **collection** (auto-memory → scratch). **Routing** (scratch → library files) is handled by Claude in the main session using the processing instructions above, since it requires reading file content and making intelligent placement decisions.
 
-For standalone use without the plugin, run `scripts/setup.sh` (macOS/Linux) or `scripts/setup.ps1` (Windows).
+For standalone use without the plugin, run `scripts/setup.sh`.

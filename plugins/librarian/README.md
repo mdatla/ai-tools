@@ -87,14 +87,11 @@ The stop hook routes `[TAG: src/api, type: edge]` → `_memory_library/src/api/e
 /reload-plugins
 ```
 
-Hooks activate automatically. Then either import existing docs or start fresh:
+Hooks activate automatically. Run the setup skill to configure your library:
 
 ```bash
-/import-library          # guided import from existing memory bank
-mkdir _memory_library    # or start from scratch
+/librarian-setup                   # choose location, optionally import existing memory bank
 ```
-
-Add `_memory_library/.scratch.md` to your `.gitignore`.
 
 ## Skills
 
@@ -103,7 +100,7 @@ Add `_memory_library/.scratch.md` to your `.gitignore`.
 | `/librarian read <path>` | Show all library context for a file path |
 | `/librarian update` | Process pending scratch entries now |
 | `/librarian status` | Show library stats |
-| `/import-library` | Create a library from an existing memory bank |
+| `/librarian-setup` | Configure library path, optionally import existing memory bank |
 
 ## Debug Logging
 
@@ -127,17 +124,15 @@ plugins/librarian/
 ├── .claude-plugin/plugin.json        # Manifest
 ├── hooks/hooks.json                  # Hook config (PreToolUse + Stop)
 ├── scripts/
-│   ├── librarian-read.sh / .ps1     # Context injection
-│   ├── librarian-write.sh / .ps1    # Auto-memory sync + routing
-│   └── setup.sh / .ps1              # Standalone setup (without plugin)
+│   ├── librarian-read.sh     # Context injection
+│   ├── librarian-write.sh    # Auto-memory sync + routing
+│   └── setup.sh              # Standalone setup (without plugin)
 ├── skills/
 │   ├── librarian/SKILL.md           # Core skill
-│   └── import-library/SKILL.md      # Import skill
+│   └── librarian-setup/SKILL.md      # Setup + import skill
 └── README.md
 ```
 
 ## Requirements
 
-No external dependencies. Scripts use only native shell (`bash`/`grep`/`sed`/`awk`) and PowerShell built-ins.
-
-Cross-platform: hooks try `bash` first, fall back to `powershell`.
+No external dependencies. Scripts use only native shell (`bash`/`grep`/`sed`/`awk`). Requires `bash` (available on macOS, Linux, and Windows via Git Bash).

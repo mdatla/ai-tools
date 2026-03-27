@@ -25,28 +25,40 @@ if [ -z "$FILE_PATH" ]; then
 fi
 log "File: $FILE_PATH"
 
-# Walk up from the file's directory to find nearest _memory_library/
-FILE_DIR=$(dirname "$FILE_PATH")
+# Find the memory library: try LIBRARIAN_PATH first, then walk up from file
+MEMORY_LIB=""
 PROJECT_DIR=""
-SEARCH_DIR="$FILE_DIR"
-while true; do
-  if [ -d "$SEARCH_DIR/_memory_library" ]; then
-    PROJECT_DIR="$SEARCH_DIR"
-    break
-  fi
-  PARENT=$(dirname "$SEARCH_DIR")
-  if [ "$PARENT" = "$SEARCH_DIR" ]; then
-    break
-  fi
-  SEARCH_DIR="$PARENT"
-done
 
-if [ -z "$PROJECT_DIR" ]; then
-  log "No _memory_library/ found"
-  exit 0
+if [ -n "${LIBRARIAN_PATH:-}" ] && [ -d "$LIBRARIAN_PATH" ]; then
+  MEMORY_LIB="$LIBRARIAN_PATH"
+  PROJECT_DIR="${LIBRARIAN_PATH%/_memory_library}"
+  if [ "$PROJECT_DIR" = "$LIBRARIAN_PATH" ]; then
+    # LIBRARIAN_PATH doesn't end with /_memory_library, use parent
+    PROJECT_DIR=$(dirname "$LIBRARIAN_PATH")
+  fi
+  log "Using configured LIBRARIAN_PATH: $MEMORY_LIB"
+else
+  # Fall back: walk up from the file's directory
+  FILE_DIR=$(dirname "$FILE_PATH")
+  SEARCH_DIR="$FILE_DIR"
+  while true; do
+    if [ -d "$SEARCH_DIR/_memory_library" ]; then
+      PROJECT_DIR="$SEARCH_DIR"
+      MEMORY_LIB="$SEARCH_DIR/_memory_library"
+      break
+    fi
+    PARENT=$(dirname "$SEARCH_DIR")
+    if [ "$PARENT" = "$SEARCH_DIR" ]; then
+      break
+    fi
+    SEARCH_DIR="$PARENT"
+  done
 fi
 
-MEMORY_LIB="$PROJECT_DIR/_memory_library"
+if [ -z "$MEMORY_LIB" ]; then
+  log "No memory library found"
+  exit 0
+fi
 
 # Compute relative path
 REL_PATH="${FILE_PATH#"$PROJECT_DIR"/}"

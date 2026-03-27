@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/librarian-read.sh\" 2>/dev/null || powershell -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/scripts/librarian-read.ps1\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/librarian-read.sh\"",
             "timeout": 5
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/librarian-write.sh\" 2>/dev/null || powershell -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/scripts/librarian-write.ps1\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/librarian-write.sh\"",
             "timeout": 10
           }
         ]

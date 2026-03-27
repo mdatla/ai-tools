@@ -18,18 +18,29 @@ set -uo pipefail
 INPUT=$(cat)
 log "Hook fired"
 
-# Extract cwd from JSON
-PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | head -1 | cut -d'"' -f4)
-if [ -z "$PROJECT_DIR" ]; then
-  log "No cwd found, skipping"
-  exit 0
+# Find the memory library: try LIBRARIAN_PATH first, then cwd/_memory_library
+MEMORY_LIB=""
+PROJECT_DIR=""
+
+if [ -n "${LIBRARIAN_PATH:-}" ] && [ -d "$LIBRARIAN_PATH" ]; then
+  MEMORY_LIB="$LIBRARIAN_PATH"
+  PROJECT_DIR="${LIBRARIAN_PATH%/_memory_library}"
+  if [ "$PROJECT_DIR" = "$LIBRARIAN_PATH" ]; then
+    PROJECT_DIR=$(dirname "$LIBRARIAN_PATH")
+  fi
+  log "Using configured LIBRARIAN_PATH: $MEMORY_LIB"
+else
+  PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | head -1 | cut -d'"' -f4)
+  if [ -z "$PROJECT_DIR" ]; then
+    log "No cwd found, skipping"
+    exit 0
+  fi
+  MEMORY_LIB="$PROJECT_DIR/_memory_library"
 fi
 log "Project: $PROJECT_DIR"
 
-MEMORY_LIB="$PROJECT_DIR/_memory_library"
-
 if [ ! -d "$MEMORY_LIB" ]; then
-  log "No _memory_library/, skipping"
+  log "No memory library found at $MEMORY_LIB"
   exit 0
 fi
 
