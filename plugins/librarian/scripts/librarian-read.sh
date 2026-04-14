@@ -20,7 +20,11 @@ log "Hook fired"
 # Extract file_path — grep the JSON string value
 FILE_PATH=$(echo "$INPUT" | grep -o '"file_path":"[^"]*"' | head -1 | cut -d'"' -f4)
 if [ -z "$FILE_PATH" ]; then
-  log "No file_path found, skipping"
+  # No file_path = UserPromptSubmit. Only inject reminder if always-on is enabled.
+  if [ "${LIBRARIAN_ALWAYS_ON:-}" = "true" ] && [ -n "${LIBRARIAN_PATH:-}" ] && [ -d "$LIBRARIAN_PATH" ]; then
+    log "No file_path (prompt hook, always-on), injecting library reminder"
+    echo "[Librarian] A memory library is available at $LIBRARIAN_PATH. Use /librarian to read context for a specific area."
+  fi
   exit 0
 fi
 log "File: $FILE_PATH"

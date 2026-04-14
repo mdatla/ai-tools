@@ -6,6 +6,13 @@ A hierarchical memory library plugin for Claude Code. Automatically loads projec
 
 ```mermaid
 flowchart TD
+    Prompt(["User sends a prompt"])
+    Prompt --> PromptHook
+
+    PromptHook["librarian-read.sh<br/>── UserPromptSubmit hook ──"]
+    PromptHook -->|"LIBRARIAN_ALWAYS_ON=true"| Reminder["Static reminder:<br/>library exists"]
+    PromptHook -->|"Not enabled"| Silent["No output"]
+
     Edit(["Claude edits a file"])
     Edit --> ReadHook
 
@@ -23,20 +30,23 @@ flowchart TD
 
     Routed -.->|"Available next session"| ReadHook
 
+    style PromptHook fill:#2d5a2d,stroke:#5a5a5a,color:#fff
     style ReadHook fill:#2d5a2d,stroke:#5a5a5a,color:#fff
     style WriteHook fill:#2d3a5a,stroke:#5a5a5a,color:#fff
     style Scratch fill:#5a4a2d,stroke:#5a5a5a,color:#fff
     style Routed fill:#5a4a2d,stroke:#5a5a5a,color:#fff
 ```
 
-### `librarian-read.sh` — loads context before edits
+### `librarian-read.sh` — loads context before edits + optional prompt reminder
 
-Fires automatically before every Edit/Write. Walks **up** the `_memory_library/` tree from the file being edited, collecting all `.md` files along the way. Injects them into Claude's conversation so it has full project context before making changes.
+**Before Edit/Write (PreToolUse):** Walks **up** the `_memory_library/` tree from the file being edited, collecting all `.md` files along the way. Injects them into Claude's conversation so it has full project context before making changes.
 
 Example: editing `src/api/auth.py` loads:
 1. `_memory_library/src/api/*.md` (most specific)
 2. `_memory_library/src/*.md`
 3. `_memory_library/*.md` (most general)
+
+**On every prompt (UserPromptSubmit):** If `LIBRARIAN_ALWAYS_ON=true` is set, injects a static one-liner reminder that the library exists. This keeps Claude aware of the library during non-editing tasks. Set it in `.claude/settings.local.json` under `env`, or use `/librarian-setup`.
 
 ### `librarian-write.sh` — saves learnings after sessions
 
@@ -122,9 +132,9 @@ LIBRARIAN_LOG_ENABLED=true   # false to disable
 ```
 plugins/librarian/
 ├── .claude-plugin/plugin.json        # Manifest
-├── hooks/hooks.json                  # Hook config (PreToolUse + Stop)
+├── hooks/hooks.json                  # Hook config (PreToolUse + Stop + UserPromptSubmit)
 ├── scripts/
-│   ├── librarian-read.sh     # Context injection
+│   ├── librarian-read.sh     # Context injection + prompt reminder
 │   ├── librarian-write.sh    # Auto-memory sync + routing
 │   └── setup.sh              # Standalone setup (without plugin)
 ├── skills/

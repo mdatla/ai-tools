@@ -7,7 +7,8 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/librarian-read.sh\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "Loading library context..."
           }
         ]
       }
@@ -19,7 +20,20 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/librarian-write.sh\"",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Syncing learnings to library..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/librarian-read.sh\"",
+            "timeout": 5,
+            "statusMessage": "Loading library context..."
           }
         ]
       }

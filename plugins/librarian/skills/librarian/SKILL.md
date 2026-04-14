@@ -4,9 +4,13 @@ description: >
   Hierarchical memory library system. Automatically loads project-specific context
   when editing files and captures learnings during sessions. Manages the
   _memory_library/ directory which mirrors the repo file tree structure.
-  Triggered by phrases like "use the librarian" or "access memory library".
+  Triggered by phrases like "use the librarian", "access memory library",
+  "check the library", "what does the library know", "library context",
+  "show library", "read library", "memory context", "read memory",
+  "show memory", "library status", "update library", "process scratch",
+  "sync learnings", or "what do we know about".
 user-invocable: true
-argument-hint: "[read|update|status]"
+argument-hint: "[your prompt/task here]"
 ---
 
 # The Librarian

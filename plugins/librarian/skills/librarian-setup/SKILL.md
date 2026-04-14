@@ -44,7 +44,22 @@ Verify the variable was written to the correct file by reading `.claude/settings
 
 This makes the path available to the hook scripts as `$LIBRARIAN_PATH`. The hooks will use this path instead of walking up the directory tree to find the library.
 
-### Step 4: Search for Existing Memory Bank (Optional)
+### Step 4: Enable Always-On Mode (Optional)
+
+Ask the user whether they want Claude to be reminded of the library on every prompt.
+
+- **No (default)** — Library context is only injected before Edit/Write operations
+- **Yes** — A lightweight reminder that the library exists is injected on every prompt, so Claude knows to consult it even during non-editing tasks
+
+If the user chooses yes, save `LIBRARIAN_ALWAYS_ON=true` to `.claude/settings.local.json` alongside `LIBRARIAN_PATH`:
+
+```
+Add env var LIBRARIAN_ALWAYS_ON=true to .claude/settings.local.json (project local settings, NOT the committed settings.json)
+```
+
+This is a minimal, static reminder (~20 tokens) — it does not inject library file contents on every prompt.
+
+### Step 5: Search for Existing Memory Bank (Optional)
 
 Search the repository for an existing memory bank that could be imported. Check these locations:
 
@@ -54,7 +69,7 @@ Search the repository for an existing memory bank that could be imported. Check 
 
 If a memory bank is found, ask the user if they want to import it. If yes, proceed to Step 5. If no (or none found), skip to Step 6.
 
-### Step 5: Import Memory Bank
+### Step 6: Import Memory Bank
 
 Read all `.md` files in the source memory bank. For each file:
 
@@ -81,17 +96,18 @@ When writing imported content:
 - Keep concise: the library stores durable knowledge, not journals
 - Use descriptive filenames, not source filenames
 
-### Step 6: Update .gitignore
+### Step 7: Update .gitignore
 
 Add the scratch file path to `.gitignore` if not already present. The scratch file path is `<library_path>/.scratch.md` (relative to repo root).
 
-### Step 7: Confirm
+### Step 8: Confirm
 
 Display a summary:
 - Library path (and that it's saved in settings)
 - Number of files created
 - Directory tree of the new library
 - Remind the user that hooks will now automatically load context before edits and capture learnings at session end
+- If always-on mode was enabled, note that Claude will be reminded of the library on every prompt
 
 ## Target Library Structure
 
