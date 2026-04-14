@@ -77,7 +77,8 @@ HOOK_CONFIG=$(cat <<HOOKEOF
           {
             "type": "command",
             "command": "$READ_CMD",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "Loading library context..."
           }
         ]
       }
@@ -89,7 +90,20 @@ HOOK_CONFIG=$(cat <<HOOKEOF
           {
             "type": "command",
             "command": "$WRITE_CMD",
-            "timeout": 15
+            "timeout": 15,
+            "statusMessage": "Syncing learnings to library..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$READ_CMD",
+            "timeout": 5,
+            "statusMessage": "Loading library context..."
           }
         ]
       }
@@ -115,6 +129,7 @@ echo ""
 echo "Hooks configured in: $SETTINGS_FILE"
 echo ""
 echo "Pre-tool hook (Edit|Write): $READ_CMD"
+echo "Prompt hook (UserPromptSubmit): $READ_CMD"
 echo "Stop hook: $WRITE_CMD"
 echo ""
 echo "Setup complete! The Librarian is now active."
