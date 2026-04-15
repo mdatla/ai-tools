@@ -111,6 +111,7 @@ Hooks activate automatically. Run the setup skill to configure your library:
 | `/librarian update` | Process pending scratch entries now |
 | `/librarian status` | Show library stats |
 | `/librarian-setup` | Configure library path, optionally import existing memory bank |
+| `/librarian-help` | How it works, troubleshooting, tips for effective use |
 
 ## Debug Logging
 

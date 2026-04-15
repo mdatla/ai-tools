@@ -42,9 +42,33 @@
   - Stop: `"Syncing learnings to library..."`
   - UserPromptSubmit: `"Loading library context..."`
 
+## Change 4: Fix hook output to use `systemMessage` JSON
+
+- [x] **Update `scripts/librarian-read.sh`** — UserPromptSubmit path
+  - Remove `LIBRARIAN_ALWAYS_ON` gate — always inject tagging reminder when library exists
+  - Output JSON `{"systemMessage":"..."}` instead of plain text
+  - Include breadcrumb/tagging instructions in the reminder (the core behavioral nudge)
+  - Build `FILES_LIST` during walk-up, include in PreToolUse `additionalContext` output
+  - Log injected file list to `librarian.log`
+
+- [x] **Update `scripts/librarian-write.sh`** — Stop hook
+  - Add `SYNCED_COUNT` and `ROUTED_COUNT` tracking through phases 1 and 2
+  - Output `{"systemMessage":"..."}` summary when work was done
+
+## Change 5: Create `/librarian-help` skill
+
+- [x] **Create `skills/librarian-help/SKILL.md`**
+  - How the Librarian works (hook-driven, hierarchical walk-up)
+  - Compatibility with Claude's built-in auto-memory
+  - Hooks fire every time (no manual invocation needed)
+  - Where to find logs (`~/.claude/librarian.log`) and toggle logging
+  - Available skills: `/librarian`, `/librarian-setup`, `/librarian-help`
+  - Tips for effective use and troubleshooting
+
 ## Documentation
 
 - [x] **Update `README.md`**
   - Update mermaid flowchart (add optional prompt awareness path)
   - Document UserPromptSubmit hook behavior (static reminder)
   - Update hooks.json description to mention UserPromptSubmit
+  - Add `/librarian-help` to skills table
