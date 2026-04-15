@@ -45,6 +45,8 @@ if [ ! -d "$MEMORY_LIB" ]; then
 fi
 
 SCRATCH="$MEMORY_LIB/.scratch.md"
+SYNCED_COUNT=0
+ROUTED_COUNT=0
 
 # --- Phase 1: Sync auto-memory to scratch ---
 
@@ -120,6 +122,7 @@ if [ -d "$AUTO_MEMORY_DIR" ]; then
       reference) LIBRARY_TYPE="tech";;
     esac
 
+    SYNCED_COUNT=$((SYNCED_COUNT + 1))
     log "Phase 1: Synced '${MEM_NAME}' (${MEM_TYPE} -> ${LIBRARY_TYPE})"
     {
       echo "## [TAG: global, type: ${LIBRARY_TYPE}]"
@@ -169,6 +172,7 @@ process_tag() {
     echo "# ${tag_type}" > "$target_file"
   fi
 
+  ROUTED_COUNT=$((ROUTED_COUNT + learning_count))
   log "Phase 2: Routed $learning_count entries -> $target_file"
   {
     echo ""
@@ -240,5 +244,6 @@ else
   > "$SCRATCH"
 fi
 
-log "Done"
+log "Done (synced: $SYNCED_COUNT, routed: $ROUTED_COUNT)"
+printf '{"systemMessage":"Librarian updated the library"}\n'
 exit 0

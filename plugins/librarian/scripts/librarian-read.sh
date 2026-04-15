@@ -20,10 +20,12 @@ log "Hook fired"
 # Extract file_path — grep the JSON string value
 FILE_PATH=$(echo "$INPUT" | grep -o '"file_path":"[^"]*"' | head -1 | cut -d'"' -f4)
 if [ -z "$FILE_PATH" ]; then
-  # No file_path = UserPromptSubmit. Only inject reminder if always-on is enabled.
-  if [ "${LIBRARIAN_ALWAYS_ON:-}" = "true" ] && [ -n "${LIBRARIAN_PATH:-}" ] && [ -d "$LIBRARIAN_PATH" ]; then
-    log "No file_path (prompt hook, always-on), injecting library reminder"
-    echo "[Librarian] A memory library is available at $LIBRARIAN_PATH. Use /librarian to read context for a specific area."
+  # UserPromptSubmit — always inject tagging reminder if library exists
+  if [ -n "${LIBRARIAN_PATH:-}" ] && [ -d "$LIBRARIAN_PATH" ]; then
+    log "No file_path (prompt hook), injecting tagging reminder"
+    REMINDER="Tag learnings to $LIBRARIAN_PATH/.scratch.md as: ## [TAG: path, type: file] + bullets."
+    ESCAPED_REMINDER=$(printf '%s' "$REMINDER" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+    printf '{"systemMessage":"Librarian active","hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"%s"}}\n' "$ESCAPED_REMINDER"
   fi
   exit 0
 fi
@@ -74,6 +76,7 @@ REL_DIR=$(dirname "$REL_PATH")
 
 # Collect .md files walking up the tree
 CONTEXT=""
+FILES_LIST=""
 CURRENT_DIR="$REL_DIR"
 VISITED_ROOT=false
 
@@ -98,6 +101,11 @@ while true; do
 --- [$DISPLAY_PREFIX/$BASENAME] ---
 $(cat "$md_file")
 "
+        if [ -n "$FILES_LIST" ]; then
+          FILES_LIST="$FILES_LIST, $DISPLAY_PREFIX/$BASENAME"
+        else
+          FILES_LIST="$DISPLAY_PREFIX/$BASENAME"
+        fi
       fi
     done
   fi
@@ -124,6 +132,11 @@ if [ "$VISITED_ROOT" = false ]; then
 --- [global/$BASENAME] ---
 $(cat "$md_file")
 "
+      if [ -n "$FILES_LIST" ]; then
+        FILES_LIST="$FILES_LIST, global/$BASENAME"
+      else
+        FILES_LIST="global/$BASENAME"
+      fi
     fi
   done
 fi
@@ -131,13 +144,13 @@ fi
 # Output JSON with additionalContext
 if [ -n "$CONTEXT" ]; then
   MD_COUNT=$(echo "$CONTEXT" | grep -c '^\-\-\-' || true)
-  log "Injecting $MD_COUNT files for $REL_PATH"
+  log "Injecting $MD_COUNT files for $REL_PATH: $FILES_LIST"
 
-  FULL_CONTEXT="[Librarian] Memory library context for $REL_PATH:
+  FULL_CONTEXT="[Librarian] Context for $REL_PATH (files: $FILES_LIST):
 $CONTEXT"
   # Escape for JSON: backslashes, quotes, newlines, tabs
   ESCAPED=$(printf '%s' "$FULL_CONTEXT" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | awk '{printf "%s\\n", $0}' | sed 's/\\n$//')
-  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","additionalContext":"%s"}}\n' "$ESCAPED"
+  printf '{"systemMessage":"Librarian injected context","hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","additionalContext":"%s"}}\n' "$ESCAPED"
 fi
 
 exit 0
