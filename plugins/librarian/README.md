@@ -7,25 +7,20 @@ A hierarchical memory library plugin for Claude Code. Automatically loads projec
 ```mermaid
 flowchart TD
     Prompt(["User sends a prompt"])
-    Prompt --> PromptHook
+    Prompt --> PromptHook["Tagging reminder injected<br/>── UserPromptSubmit ──"]
 
-    PromptHook["librarian-read.sh<br/>── UserPromptSubmit hook ──"]
-    PromptHook -->|"LIBRARIAN_ALWAYS_ON=true"| Reminder["Static reminder:<br/>library exists"]
-    PromptHook -->|"Not enabled"| Silent["No output"]
-
-    Edit(["Claude edits a file"])
-    Edit --> ReadHook
-
-    ReadHook["librarian-read.sh<br/>── PreToolUse hook ──"]
-    ReadHook --> EditDone["Claude makes the edit<br/>with library context injected"]
-
-    EditDone --> Learns{"Learned something<br/>worth keeping?"}
+    PromptHook --> Work["Claude works on the task"]
+    Work --> Learns{"Learned something<br/>worth keeping?"}
     Learns -->|Yes| Scratch[("Append to<br/>.scratch.md")]
-    Learns -->|No| Next["Continue working"]
-    Scratch --> Next
-    Next -->|Session ends| WriteHook
+    Learns -->|No| Continue["Continue working"]
+    Scratch --> Continue
 
-    WriteHook["librarian-write.sh<br/>── Stop hook ──"]
+    Continue --> Edit(["Claude edits a file"])
+    Edit --> ReadHook["Library context injected<br/>── PreToolUse ──"]
+    ReadHook --> EditDone["Edit made with<br/>full project context"]
+
+    EditDone --> Next["Session ends"]
+    Next --> WriteHook["Sync & route learnings<br/>── Stop ──"]
     WriteHook --> Routed[("Learnings saved to<br/>_memory_library/")]
 
     Routed -.->|"Available next session"| ReadHook
@@ -37,7 +32,9 @@ flowchart TD
     style Routed fill:#5a4a2d,stroke:#5a5a5a,color:#fff
 ```
 
-### `librarian-read.sh` — loads context before edits + optional prompt reminder
+### `librarian-read.sh` — loads context before edits, reminds to tag learnings
+
+**On every prompt (UserPromptSubmit):** Injects a compact tagging reminder into context so Claude captures learnings to `.scratch.md` during regular work.
 
 **Before Edit/Write (PreToolUse):** Walks **up** the `_memory_library/` tree from the file being edited, collecting all `.md` files along the way. Injects them into Claude's conversation so it has full project context before making changes.
 
@@ -45,8 +42,6 @@ Example: editing `src/api/auth.py` loads:
 1. `_memory_library/src/api/*.md` (most specific)
 2. `_memory_library/src/*.md`
 3. `_memory_library/*.md` (most general)
-
-**On every prompt (UserPromptSubmit):** If `LIBRARIAN_ALWAYS_ON=true` is set, injects a static one-liner reminder that the library exists. This keeps Claude aware of the library during non-editing tasks. Set it in `.claude/settings.local.json` under `env`, or use `/librarian-setup`.
 
 ### `librarian-write.sh` — saves learnings after sessions
 
