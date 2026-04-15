@@ -1,5 +1,19 @@
 # Librarian Setup Guide
 
+## Add the Marketplace
+
+If you haven't added the marketplace yet:
+
+```bash
+/plugin marketplace add https://github.com/mdatla/ai-tools.git
+```
+
+If you already have it, pull the latest:
+
+```bash
+/plugin marketplace update
+```
+
 ## Install
 
 ```bash
