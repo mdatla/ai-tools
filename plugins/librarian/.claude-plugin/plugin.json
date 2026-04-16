@@ -1,6 +1,6 @@
 {
   "name": "librarian",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Hierarchical memory library system that automatically loads project-specific context when editing files and captures learnings during sessions",
   "author": {
     "name": "Maanas Datla",

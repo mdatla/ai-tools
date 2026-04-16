@@ -76,7 +76,7 @@ The Stop hook routes these entries to `_memory_library/<path>/<type>.md` automat
 | Skill | Purpose |
 |-------|---------|
 | `/librarian [prompt]` | Read context, process scratch, check status, or ask about the library |
-| `/librarian-setup` | Configure library path, import existing memory bank, enable always-on mode |
+| `/librarian-setup` | Configure library path, import existing memory bank |
 | `/librarian-help [question]` | This help — how to use the Librarian effectively |
 
 ## Where to Find Logs
