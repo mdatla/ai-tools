@@ -23,7 +23,7 @@ if [ -z "$FILE_PATH" ]; then
   # UserPromptSubmit — always inject tagging reminder if library exists
   if [ -n "${LIBRARIAN_PATH:-}" ] && [ -d "$LIBRARIAN_PATH" ]; then
     log "No file_path (prompt hook), injecting tagging reminder"
-    REMINDER="Tag learnings to $LIBRARIAN_PATH/.scratch.md as: ## [TAG: path, type: file] + bullets."
+    REMINDER="Tag learnings to $LIBRARIAN_PATH/.scratch.md as: ## [TAG: path, type: file] + bullets. Capture WHY not WHAT — gotchas, non-obvious constraints, decisions and their rationale, surprising behavior, things you'd want to know next time. Include a short summary of what was done."
     ESCAPED_REMINDER=$(printf '%s' "$REMINDER" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
     printf '{"systemMessage":"Librarian active","hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"%s"}}\n' "$ESCAPED_REMINDER"
   fi
