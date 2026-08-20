@@ -13,6 +13,11 @@
       "name": "librarian",
       "source": "./plugins/librarian",
       "description": "Hierarchical memory library system that automatically loads project-specific context when editing files and captures learnings during sessions"
+    },
+    {
+      "name": "status-helper",
+      "source": "./plugins/status-helper",
+      "description": "De-dupes status reporting: reads Obsidian notes and Azure DevOps as parallel sources of truth, quizzes on the gaps between them, then updates the Confluence status doc and drafts an update message"
     }
   ]
 }
