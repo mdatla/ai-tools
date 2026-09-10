@@ -1,12 +1,12 @@
 {
   "name": "status-helper",
   "displayName": "Status Helper",
-  "version": "0.1.0",
-  "description": "De-dupes status reporting: reads Obsidian notes and Azure DevOps as parallel sources of truth, quizzes on the gaps between them, then updates the Confluence status doc and drafts an update message",
+  "version": "0.2.0",
+  "description": "De-dupes status reporting: reads Claude Code transcripts, Obsidian notes, and Azure DevOps, matches gathered work against the Confluence status doc's existing topics, and reviews the proposed changeset with you before writing anything",
   "author": {
     "name": "Maanas Datla",
     "email": "maanas.datla@buildertrend.com"
   },
   "license": "MIT",
-  "keywords": ["obsidian", "azure-devops", "confluence", "project-management", "status-report", "notes"]
+  "keywords": ["obsidian", "azure-devops", "confluence", "claude-code-transcripts", "project-management", "status-report", "notes"]
 }

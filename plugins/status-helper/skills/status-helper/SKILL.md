@@ -1,20 +1,21 @@
 ---
 name: status-helper
-description: De-dupes status reporting by reading Obsidian notes and Azure DevOps boards as parallel sources of truth, quizzing the user on gaps between them, then updating the Confluence project-status doc and drafting an update message. Use for "run status helper", "status update", "weekly status", "update the status doc", "draft my update", "what's the project status", or first-time setup of the sources-of-truth config.
+description: De-dupes status reporting by reading Claude Code transcripts, Obsidian notes, and Azure DevOps as sources of truth, matching gathered work against the existing topics in a Confluence project-status doc, and reviewing the proposed changes — updates to existing rows and any new rows to add — with the user before writing anything. Also drafts an update message. Use for "run status helper", "status update", "weekly status", "update the status doc", "draft my update", "what's the project status", or first-time setup of the sources-of-truth config.
 ---
 
 # Status Helper
 
-You write the same status twice — once as notes in Obsidian, once as ticket updates in Azure DevOps — and then have to write it a third time for the Confluence doc and a fourth time as an update message. This skill collapses that: read both sources, reconcile them, ask only about what genuinely doesn't line up, then produce the doc update and the message.
+You write the same status three or four times: what you actually did lives in your Claude Code sessions, what you decided lives in Obsidian notes, what tickets moved lives in Azure DevOps — and then you write it *again* by hand into the Confluence status doc and *again* as an update message. This skill collapses the redundant part: gather from the first three, match against what the doc already tracks, and show you exactly what would change before anything is written.
 
-**Two sources, different roles:**
+**Three sources feed the picture. None of them are the doc:**
 
-- **Azure DevOps** is the source of truth for *ticket state* — what exists, what state it's in, who owns it.
-- **Obsidian** is the source of truth for *narrative* — why something is stuck, what was decided, what isn't ticketed yet.
+- **Claude Code transcripts** — what you actually worked on, in your own words, including asks that never became a ticket or a note.
+- **Azure DevOps** — ticket state: what exists, what state it's in, who owns it.
+- **Obsidian** — narrative: why something is stuck, what was decided, what isn't ticketed yet.
 
-Neither wins outright. Where they disagree, that's a gap, and gaps go to the user.
+**The Confluence doc is read first, not written first.** It already has topics — rows in a table, or named sections, depending on how the doc is structured. The job is to match gathered work against those existing topic names, propose an update to each one that has movement, and propose a **new topic** for anything real that has no home yet. Nothing gets written until the user has seen the actual before/after and signed off.
 
-**Direction of writes:** boards are read-only. This skill writes to Confluence and to the vault (draft message only), never to ADO.
+**Direction of writes:** ADO is read-only. Transcripts are read-only. This skill writes to Confluence (after approval) and to the vault (draft message only, never touching existing notes).
 
 ## Configuration: the sources-of-truth doc
 
@@ -26,6 +27,11 @@ The doc has this shape:
 
 ```markdown
 # Status Helper — Sources of Truth
+
+## Claude Code transcripts
+- cwd-prefixes: <comma-separated absolute paths; only sessions under these count as work>
+- lookback-days: 14
+- notes: <anything about which repos/projects to include or exclude>
 
 ## Azure DevOps
 - organization: https://dev.azure.com/<org>
@@ -49,8 +55,10 @@ The doc has this shape:
 ## Status doc (Confluence)
 - url: <Confluence page URL>
 - space: <space key>
+- topic-structure: <how topics are represented, e.g. "one row per topic in the table under 'Projects'" or "one H2 section per topic">
+- topic-key: <what identifies a topic, e.g. "first column of the table" or "the H2 heading text">
 - cadence: weekly
-- notes: <structure conventions for the doc — section per week, tables used, etc.>
+- notes: <other structure conventions — status columns, macros used, etc.>
 
 ## Reporting conventions
 <!-- filled in as we learn: what counts as "done" states, what to highlight,
@@ -65,16 +73,27 @@ Walk through this conversationally, one piece at a time:
 2. **Org and project**: ask, then set defaults: `az devops configure --defaults organization=... project=...`.
 3. **Boards**: ask which board(s) are the SOT. Help discover them: `az devops team list -o table`, then for a team `az boards area team list --team "<team>" -o table`. For each board, record name + team/area-path. Verify each with a test query before saving it.
 4. **Obsidian vault**: discover vaults from `~/Library/Application Support/obsidian/obsidian.json` (macOS) and offer the list. Ask which folders hold work notes — default to `Daily` and `Notes`. Ask where drafted messages should be saved in the vault. Verify by listing a few recent notes back to the user.
-5. **Status doc**: ask for the Confluence page URL. Fetch it via the Atlassian MCP to confirm access and learn its structure; record the URL and structure notes. If the Atlassian MCP isn't authenticated, ask the user to run `/mcp` and authenticate `atlassian`. If the doc doesn't exist yet, offer to create it (ask for space + parent page).
-6. **Write the sources doc** with everything gathered, show it to the user, and confirm.
+5. **Claude Code transcripts**: ask which repos/working directories count as work for this doc (e.g. everything under `~/Code/repos`) — record as `cwd-prefixes`. Verify with a quick scan and show a couple of matched session snippets back.
+6. **Status doc**: ask for the Confluence page URL. Fetch it via the Atlassian MCP to confirm access. Read its actual structure and ask the user to confirm: is a "topic" a table row, or a section heading? Which field is the topic name? Record `topic-structure` and `topic-key` precisely — this is what makes matching possible later. If the Atlassian MCP isn't authenticated, ask the user to run `/mcp` and authenticate `atlassian`. If the doc doesn't exist yet, offer to create it (ask for space + parent page + desired topic structure).
+7. **Write the sources doc** with everything gathered, show it to the user, and confirm.
 
 When the user later shares details about doc format or reporting conventions, **update the sources doc** so future runs pick them up.
 
 ## The Run
 
-### Step 1: Read Azure DevOps
+### Step 1: Collect from all three sources
 
-For each board in the sources doc, pull current state. Default query (adjust per board's `query`/`notes`, and set the lookback to match `lookback-days`):
+Run these independently (order doesn't matter, but do them before touching Confluence):
+
+**Claude Code transcripts:**
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/collect-transcripts.sh" <lookback-days> <cwd-prefix-1> [cwd-prefix-2 ...]
+```
+
+Read for what was actually worked on: the human asks (real signal) and the assistant's own text summaries (skip thinking/tool-use noise — the script already strips it). This surfaces work that never made it into a ticket or a note at all.
+
+**Azure DevOps**, for each configured board:
 
 ```bash
 az boards query --wiql "
@@ -87,81 +106,77 @@ WHERE [System.AreaPath] UNDER '<area-path>'
 ORDER BY [System.State], [System.ChangedDate] DESC" -o json
 ```
 
-Pull items that closed since the last update and items still open, so the rollup can say what shipped, what's in flight, and what's stuck (no changes in >14 days but still active). Use `az boards work-item show --id <id>` when detail on a specific item matters.
+Pull items that closed since the last update and items still open. Use `az boards work-item show --id <id>` when detail on a specific item matters.
 
-### Step 2: Read Obsidian
-
-Collect notes modified within the lookback window:
+**Obsidian:**
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/collect-notes.sh" "<vault>" <lookback-days> Daily Notes
 ```
 
-Read for signal, not completeness. What matters:
+Read for work claims, blockers/decisions (the *why* neither ADO nor a transcript usually carries), ticket references, and untracked work.
 
-- **Work claims** — "finished X", "shipped Y", "started Z"
-- **Blockers and decisions** — the *why* behind a state, which ADO rarely carries
-- **Ticket references** — IDs like `AB#12345`, `#12345`, or bare 4–6 digit numbers near work language
-- **Untracked work** — real effort described with no ticket anywhere
+### Step 2: Read the Confluence doc's existing topics
 
-Ignore personal/non-work content. Daily notes are scratch; treat unchecked boxes as intent, not status.
+Fetch the page via the Atlassian MCP. Using `topic-structure`/`topic-key` from the sources doc, extract the list of **existing topic names** exactly as they appear — table rows, section headings, whatever the doc actually uses. This list is the join key for the next step. Also capture each topic's current content, so a diff is possible.
 
-### Step 3: Reconcile — build the gap list
+### Step 3: Map gathered work onto topics
 
-Cross-reference the two sources. A gap is one of:
+For everything collected in Step 1, match it to an existing topic name by keyword/semantic similarity (project name, repo name, epic name, ticket area path, etc.). Group into three buckets:
+
+- **Matched** — work maps cleanly onto an existing topic. Build its proposed updated content.
+- **New topic candidate** — real, substantive work with no reasonable match to any existing topic. Draft a proposed new row/section for it.
+- **Unmatched noise** — trivial or ambiguous items not worth surfacing (a one-off aside, a personal note, a transcript exchange with no concrete outcome). Drop these silently.
+
+While mapping, also build the gap list — same as before, now checked across three sources instead of two:
 
 | Gap | Signal |
 |---|---|
-| **Conflict** | Note says done, ticket is Active (or vice versa) |
-| **Silent movement** | Ticket changed state with nothing in notes explaining it |
-| **Untracked work** | Notes describe real work with no matching ticket |
-| **Unexplained stall** | Ticket active >14 days, no note touching it |
-| **Blank** | Ticket is in scope for the update but neither source says anything current |
+| **Conflict** | Sources disagree on state (note/transcript says done, ticket is Active, or vice versa) |
+| **Silent movement** | Ticket changed state with nothing in notes or transcripts explaining it |
+| **Untracked work** | Notes or transcripts describe real work with no matching ticket |
+| **Unexplained stall** | Ticket active >14 days, untouched in notes or transcripts |
 
-Do **not** raise: cosmetic wording differences, personal notes, tickets already correct in both places, or anything the reporting conventions say to skip.
+Do **not** raise cosmetic wording differences, personal content, or anything the reporting conventions say to skip.
 
-### Step 4: Quiz — one round, only real gaps
+### Step 4: Build the proposed changeset
 
-Ask about the gap list in a **single batched round** using AskUserQuestion where the answer is a choice, plain text where it's open-ended. Never drip questions one at a time across turns.
+For every matched topic with real movement, produce a **before → after** diff of that row/section's content — not a rewrite of the whole doc, a targeted change. For every new-topic candidate, produce the proposed new row/section in full, clearly labeled as new. Topics with no movement this period are left out of the changeset entirely — don't touch what didn't change.
 
-For each gap, give the user the evidence — what the note says, what the ticket says — so they can answer without going to look. Offer a concrete best guess as the first option; you have both sources in front of you and usually can tell which is right.
+### Step 5: Review with the human
 
-If there are no real gaps, say so and skip straight to the draft. A clean run should be quiet.
+This is the core checkpoint — nothing from Step 4 is written yet. Present:
 
-### Step 5: Draft the Confluence update
+1. **The changeset**, topic by topic: current content next to proposed content for existing topics, and the full proposed content for each new-topic candidate, clearly marked `NEW`.
+2. **The gap list** from Step 3, batched into a single round via AskUserQuestion where the answer is a choice, plain text where it's open-ended. Give the evidence from each source so the user doesn't have to go look. Offer a concrete best guess as the first option.
+3. **An open invitation to add anything**: after the changeset and gaps, explicitly ask if there's anything to add, correct, or reprioritize that none of the three sources caught — context that only lives in the user's head counts too.
 
-Build the update from the reconciled picture, following the doc's existing structure and the Reporting conventions section. Until conventions are defined, default to:
+Fold anything the user adds directly into the changeset before moving on. If there are no gaps and no changes to propose, say so plainly — a quiet doc means a quiet run.
 
-- **Week of \<Monday's date\>** as the section heading
-- **Shipped** — items that moved to done/closed since the last section
-- **In progress** — active items, grouped by epic/feature where the hierarchy exists
-- **Risks / stuck** — active items unchanged >14 days, or anything the user flagged
-- **Up next** — new/committed items for the coming week
-
-Fetch the Confluence page first and read the most recent section, so this update is a delta rather than a restatement. Show the draft to the user before publishing.
+Do not proceed to Step 6 without explicit approval of the final changeset.
 
 ### Step 6: Draft the update message
 
-Separately from the doc, draft a short human-readable update message — the kind you'd post to a channel or send to a lead. Shorter and more narrative than the doc: what moved, what's blocked, what's needed from others. Lead with anything that requires someone else to act.
+Separately from the doc, draft a short human-readable update message — the kind you'd post to a channel or send to a lead. Shorter and more narrative than the doc: what moved, what's blocked, what's needed from others, and call out any brand-new topics explicitly. Lead with anything that requires someone else to act.
 
 Do both of these:
 
 1. **Print it in the chat** in a fenced block so it can be copied straight out.
 2. **Save it to the vault** at the `draft-output` path from the sources doc, stamped with the date. Create parent folders if needed. Tell the user the path.
 
-### Step 7: Update Confluence
+### Step 7: Apply the approved changeset to Confluence
 
-After the user approves the draft: add the new section (newest at top, unless the doc's convention differs), preserving all prior sections and the page's macros and formatting. Confluence storage format is XHTML — don't inject raw markdown. Never delete or rewrite past sections.
+Write exactly what was approved in Step 5 — updates to the matched topics' rows/sections, and new rows/sections for approved new-topic candidates — using the same `topic-structure` conventions read in Step 2. Confluence storage format is XHTML — don't inject raw markdown. Never touch a topic that wasn't part of the approved changeset, and never delete or rewrite historical content within a topic unless the user explicitly asked for that edit.
 
 ### Step 8: Report
 
-Link the updated page, name the file the draft was saved to, and summarize what the update says. List anything still ambiguous — mislabeled states, unassigned items, work with no ticket — as suggestions. Do not modify work items.
+Link the updated page, name the file the draft message was saved to, and summarize what changed — which topics were updated, which were added. List anything still ambiguous (mislabeled states, unassigned items, work with no ticket) as suggestions. Do not modify work items.
 
 ## Guardrails
 
-- Boards are read-only. Never create, update, or close work items in this flow.
-- Never edit the Confluence page without showing the draft and getting a yes.
-- Never touch past sections on the status doc.
+- ADO and transcripts are read-only. Never create, update, or close work items, and never write back into a transcript.
+- Never write to Confluence without showing the full before/after changeset and getting explicit approval.
+- Never touch a topic that had no proposed change, and never rewrite a topic's history beyond the approved edit.
 - Only ever write into the vault at the configured `draft-output` path — never edit the user's existing notes.
-- Ask only about real conflicts and blanks. Batch the questions into one round.
-- If the sources doc and reality disagree (board gone, page moved, vault path stale), stop and reconcile the sources doc with the user first.
+- Batch all gap questions into one round; always give the user a final open chance to add detail before publishing.
+- If the sources doc and reality disagree (board gone, page moved, vault path stale, topic structure changed), stop and reconcile the sources doc with the user first.
