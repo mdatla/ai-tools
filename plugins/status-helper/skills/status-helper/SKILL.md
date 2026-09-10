@@ -88,7 +88,7 @@ Run these independently (order doesn't matter, but do them before touching Confl
 **Claude Code transcripts:**
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/collect-transcripts.sh" <lookback-days> <cwd-prefix-1> [cwd-prefix-2 ...]
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/collect_transcripts.py" <lookback-days> <cwd-prefix-1> [cwd-prefix-2 ...]
 ```
 
 Read for what was actually worked on: the human asks (real signal) and the assistant's own text summaries (skip thinking/tool-use noise — the script already strips it). This surfaces work that never made it into a ticket or a note at all.
@@ -111,7 +111,7 @@ Pull items that closed since the last update and items still open. Use `az board
 **Obsidian:**
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/collect-notes.sh" "<vault>" <lookback-days> Daily Notes
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/collect_notes.py" "<vault>" <lookback-days> Daily Notes
 ```
 
 Read for work claims, blockers/decisions (the *why* neither ADO nor a transcript usually carries), ticket references, and untracked work.

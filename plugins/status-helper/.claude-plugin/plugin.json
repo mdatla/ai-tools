@@ -1,7 +1,7 @@
 {
   "name": "status-helper",
   "displayName": "Status Helper",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "De-dupes status reporting: reads Claude Code transcripts, Obsidian notes, and Azure DevOps, matches gathered work against the Confluence status doc's existing topics, and reviews the proposed changeset with you before writing anything",
   "author": {
     "name": "Maanas Datla",

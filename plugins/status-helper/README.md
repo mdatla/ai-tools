@@ -52,7 +52,7 @@ Cosmetic differences, personal content, and already-correct tickets are not gaps
 - `az` CLI with the `azure-devops` extension, logged in
 - Atlassian MCP authenticated (`/mcp`) — bundled in this plugin's `.mcp.json`
 - An Obsidian vault
-- `jq`, for reading Claude Code transcripts
+- Python 3 (scripts are stdlib-only, no pip install needed)
 
 ## Guardrails
 
